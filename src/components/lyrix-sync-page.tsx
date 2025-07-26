@@ -1,3 +1,8 @@
+  // Handler for selecting a song from the library
+  const handleSelectSong = (song: Song) => {
+    setSelectedSong(song);
+    // Optionally trigger lyrics fetch here
+  };
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import Header from './layout/header';
 import MusicLibrary from './music-library';
 import LyricsDisplay from './lyrics-display';
+import LocalMediaPlayer from './local-media-player';
+import SpotifyPlayer from './spotify-player';
 import { Toaster } from './ui/toaster';
 
 const spotifySongs: Song[] = [
@@ -34,81 +41,39 @@ export default function LyrixSyncPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchLyrics = async (artist: string, title: string) => {
-    setIsLoading(true);
-    setLyrics(null);
-    setError(null);
-    const lyricsId = `lyrics-${artist}-${title}`.replace(/\s+/g, '-').toLowerCase();
-
-    try {
-      // Offline-first approach
-      const cachedLyrics = localStorage.getItem(lyricsId);
-      if (cachedLyrics) {
-        setLyrics(cachedLyrics);
-        setIsLoading(false);
-        return;
-      }
-
-      const input: GenerateLyricsInput = { artist, title };
-      const result = await generateLyrics(input);
-
-      if (result.lyrics) {
-        setLyrics(result.lyrics);
-        localStorage.setItem(lyricsId, result.lyrics);
-      } else {
-        throw new Error('Lyrics not found by AI.');
-      }
-    } catch (e: any) {
-      const errorMessage = e.message || 'Failed to fetch lyrics.';
-      setError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleSelectSong = (song: Song) => {
-    setSelectedSong(song);
-    fetchLyrics(song.artist, song.title);
-  };
-  
-  const handleManualSearch = (artist: string, title: string) => {
-    if(selectedSong){
-        const newSongData = {...selectedSong, artist, title};
-        setSelectedSong(newSongData);
-    }
-    fetchLyrics(artist, title);
-  }
-
   return (
-    <main className="min-h-screen bg-background text-foreground p-4 sm:p-6 md:p-8">
-      <div className="container mx-auto">
-        <Header />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="lg:col-span-1">
-            <MusicLibrary 
-              onSelectSong={handleSelectSong} 
-              selectedSong={selectedSong}
+    <>
+      <Header />
+      <main className="container mx-auto py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <MusicLibrary
               spotifySongs={spotifySongs}
               youtubeSongs={youtubeSongs}
               localSongs={localSongs}
+              onSelectSong={handleSelectSong}
+              selectedSong={selectedSong}
             />
+            <div className="mt-8">
+              <LocalMediaPlayer />
+            </div>
+            <div className="mt-8">
+              <SpotifyPlayer />
+            </div>
           </div>
-          <div className="lg:col-span-2 lg:sticky lg:top-8">
-            <LyricsDisplay
-              song={selectedSong}
-              lyrics={lyrics}
-              isLoading={isLoading}
-              error={error}
-              onManualSearch={handleManualSearch}
-            />
-          </div>
+          <LyricsDisplay
+            song={selectedSong}
+            lyrics={lyrics}
+            isLoading={isLoading}
+            error={error}
+            onManualSearch={(artist, title) => {
+              setSelectedSong({ id: '', title, artist, source: 'local', coverArt: '' });
+              // Optionally trigger lyrics fetch here
+            }}
+          />
         </div>
-      </div>
-    </main>
+      </main>
+      <Toaster />
+    </>
   );
 }
