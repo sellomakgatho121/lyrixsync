@@ -1,5 +1,5 @@
 const CLIENT_ID = '81f00f9648bf426b8e71d74a39ced7ae';
-const REDIRECT_URI = 'https://lyrixsync.vercel.app/api/spotify-callback';
+const REDIRECT_URI = 'https://lyrixsync.vercel.app';
 const SCOPES = 'user-read-playback-state user-read-currently-playing';
 const loginUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
 import React, { useEffect, useState } from 'react';
@@ -39,7 +39,7 @@ export default function SpotifyPlayer() {
     if (track && track.artists && track.name) {
       const artist = track.artists[0].name;
       const title = track.name;
-      lyricsFinder(artist, title).then(setLyrics);
+      lyricsFinder(artist, title).then(result => setLyrics(result || "No lyrics found."));
     }
   }, [track]);
 

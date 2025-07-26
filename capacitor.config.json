@@ -1,0 +1,6 @@
+{
+  "appId": "com.lyrixsync.app",
+  "appName": "lyrixsync",
+  "webDir": "out",
+  "bundledWebRuntime": false
+}

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const CLIENT_ID = '81f00f9648bf426b8e71d74a39ced7ae';
-const CLIENT_SECRET = '8e976f438d81485d89fb875ded9551cb';
-const REDIRECT_URI = 'https://lyrixsync.vercel.app';
+const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
+const CLIENT_SECRET = 'YOUR_GOOGLE_CLIENT_SECRET';
+const REDIRECT_URI = 'https://lyrixsync.vercel.app/api/youtube-music-callback';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
@@ -11,13 +11,13 @@ export async function GET(req: NextRequest) {
   }
 
   const params = new URLSearchParams();
-  params.append('grant_type', 'authorization_code');
   params.append('code', code);
-  params.append('redirect_uri', REDIRECT_URI);
   params.append('client_id', CLIENT_ID);
   params.append('client_secret', CLIENT_SECRET);
+  params.append('redirect_uri', REDIRECT_URI);
+  params.append('grant_type', 'authorization_code');
 
-  const response = await fetch('https://accounts.spotify.com/api/token', {
+  const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   if (data.access_token) {
     // Redirect to home with token in query (for demo; use cookies/localStorage in production)
-    return NextResponse.redirect(`/?spotify_token=${data.access_token}`);
+    return NextResponse.redirect(`/?youtube_token=${data.access_token}`);
   } else {
     return NextResponse.json({ error: 'Failed to get access token', details: data }, { status: 400 });
   }
