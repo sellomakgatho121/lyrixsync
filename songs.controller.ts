@@ -1,4 +1,5 @@
-import { getSongs, getSong, getLyrics } from './songs.service';
+
+import { getSongs, getSong, getLyrics, addLyric, updateLyric, deleteLyric } from './songs.service';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
 
@@ -31,6 +32,54 @@ export const getLyricsController = async (req: NextApiRequest, res: NextApiRespo
         res.status(200).json(lyrics);
     } catch (error) {
         console.error('Error fetching lyrics:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const addLyricController = async (req: NextApiRequest, res: NextApiResponse) => {
+    const { songId, text, timestamp } = req.body;
+
+    if (!songId || !text || !timestamp) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    try {
+        const newLyric = await addLyric(songId, text, timestamp);
+        res.status(201).json(newLyric);
+    } catch (error) {
+        console.error('Error adding lyric:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const updateLyricController = async (req: NextApiRequest, res: NextApiResponse) => {
+    const { id, text, timestamp } = req.body;
+
+    if (!id || !text || !timestamp) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    try {
+        const updatedLyric = await updateLyric(id, text, timestamp);
+        res.status(200).json(updatedLyric);
+    } catch (error) {
+        console.error('Error updating lyric:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const deleteLyricController = async (req: NextApiRequest, res: NextApiResponse) => {
+    const { id } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ message: 'Missing id' });
+    }
+
+    try {
+        await deleteLyric(id);
+        res.status(200).json({ message: 'Lyric deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting lyric:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

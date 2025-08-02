@@ -30,6 +30,11 @@ export const addSong = async (title: string, artist: string, audioUrl: string, u
   });
 };
 
+
+// ... (imports)
+
+// ... (getSongs, getSong, addSong)
+
 export const getLyrics = async (songId: string) => {
   return prisma.lyric.findMany({
     where: {
@@ -40,3 +45,34 @@ export const getLyrics = async (songId: string) => {
     },
   });
 };
+
+export const addLyric = async (songId: string, text: string, timestamp: number) => {
+  return prisma.lyric.create({
+    data: {
+      songId,
+      text,
+      timestamp,
+    },
+  });
+};
+
+export const updateLyric = async (id: string, text: string, timestamp: number) => {
+  return prisma.lyric.update({
+    where: {
+      id,
+    },
+    data: {
+      text,
+      timestamp,
+    },
+  });
+};
+
+export const deleteLyric = async (id: string) => {
+  return prisma.lyric.delete({
+    where: {
+      id,
+    },
+  });
+};
+

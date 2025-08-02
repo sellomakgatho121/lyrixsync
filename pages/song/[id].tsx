@@ -1,7 +1,10 @@
-
 import { useRouter } from 'next/router'
-import useSWR from 'swr'
+import useSWR, { mutate } from 'swr'
 import { NextPage } from 'next'
+import { useState, useEffect } from 'react'
+import io from 'socket.io-client'
+
+let socket
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -9,11 +12,79 @@ const SongPage: NextPage = () => {
     const router = useRouter()
     const { id } = router.query
 
-    const { data: song, error: songError } = useSWR(`/api/songs?id=${id}`, fetcher)
-    const { data: lyrics, error: lyricsError } = useSWR(`/api/lyrics?songId=${id}`, fetcher)
+    const { data: song, error: songError } = useSWR(id ? `/api/songs?id=${id}` : null, fetcher)
+    const { data: initialLyrics, error: lyricsError } = useSWR(id ? `/api/lyrics?songId=${id}` : null, fetcher)
+
+    const [lyrics, setLyrics] = useState([])
+    const [newLyricText, setNewLyricText] = useState('')
+    const [newLyricTimestamp, setNewLyricTimestamp] = useState(0)
+
+    useEffect(() => {
+        if (initialLyrics) {
+            setLyrics(initialLyrics)
+        }
+    }, [initialLyrics])
+
+    useEffect(() => {
+        socketInitializer()
+        return () => {
+            if (socket) socket.disconnect()
+        }
+    }, [id])
+
+    const socketInitializer = async () => {
+        if (!id) return
+        await fetch('/api/socket');
+        socket = io()
+
+        socket.on('connect', () => {
+            console.log('connected')
+            socket.emit('join-room', `song-${id}`)
+        })
+
+        socket.on('lyric-updated', () => {
+            mutate(`/api/lyrics?songId=${id}`)
+        })
+    }
+
+    const handleAddLyric = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newLyricText || !newLyricTimestamp) return
+
+        const res = await fetch('/api/lyrics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ songId: id, text: newLyricText, timestamp: parseFloat(newLyricTimestamp) }),
+        })
+
+        if (res.ok) {
+            const newLyric = await res.json()
+            setLyrics([...lyrics, newLyric])
+            setNewLyricText('')
+            setNewLyricTimestamp(0)
+            socket.emit('lyric-change', `song-${id}`)
+        }
+    }
+
+    const handleDeleteLyric = async (lyricId: string) => {
+        const res = await fetch('/api/lyrics', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: lyricId }),
+        })
+
+        if (res.ok) {
+            setLyrics(lyrics.filter(lyric => lyric.id !== lyricId))
+            socket.emit('lyric-change', `song-${id}`)
+        }
+    }
 
     if (songError || lyricsError) return <div>Failed to load</div>
-    if (!song || !lyrics) return <div>Loading...</div>
+    if (!song) return <div>Loading...</div>
 
     return (
         <div className="bg-gray-900 text-white min-h-screen p-8">
@@ -22,11 +93,34 @@ const SongPage: NextPage = () => {
 
             <div className="prose prose-invert">
                 {lyrics.map((lyric) => (
-                    <p key={lyric.id} data-timestamp={lyric.timestamp}>
-                        {lyric.text}
-                    </p>
+                    <div key={lyric.id} className="flex items-center justify-between">
+                        <p data-timestamp={lyric.timestamp}>
+                            {lyric.text}
+                        </p>
+                        <button onClick={() => handleDeleteLyric(lyric.id)} className="text-red-500">Delete</button>
+                    </div>
                 ))}
             </div>
+
+            <form onSubmit={handleAddLyric} className="mt-8 flex space-x-4">
+                <input
+                    type="text"
+                    placeholder="Lyric text"
+                    value={newLyricText}
+                    onChange={(e) => setNewLyricText(e.target.value)}
+                    className="p-2 rounded bg-gray-700 text-white"
+                />
+                <input
+                    type="number"
+                    placeholder="Timestamp (in seconds)"
+                    value={newLyricTimestamp}
+                    onChange={(e) => setNewLyricTimestamp(e.target.value)}
+                    className="p-2 rounded bg-gray-700 text-white"
+                />
+                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Add Lyric
+                </button>
+            </form>
         </div>
     )
 }
