@@ -1,3 +1,4 @@
+
 # Roadmap
 
 This document outlines the planned upgrades and enhancements for LyrixSync.
@@ -11,7 +12,7 @@ This document outlines the planned upgrades and enhancements for LyrixSync.
     * [x] Create a page to display lyrics
     * [x] Implement lyric editing functionality
     * [x] Implement lyric and audio synchronization
-* [ ] **User Profiles:** Create user profiles where users can see their added songs and manage their account.
+* [x] **User Profiles:** Create user profiles where users can see their added songs and manage their account.
 * [ ] **Improved UI/UX:** Enhance the user interface with features like pagination, search, and sorting for the song list.
 
 ## Bugs Fixed

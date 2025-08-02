@@ -1,3 +1,4 @@
+
 import Head from 'next/head'
 import Link from 'next/link'
 import useSWR, { mutate } from 'swr'
@@ -44,10 +45,13 @@ export default function Home() {
       <header className="bg-gray-800 p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">LyrixSync</h1>
         <nav>
-          <a href="#" className="mr-4">Home</a>
-          <a href="#">About</a>
+          <Link href="/" className="mr-4">Home</Link>
+          <Link href="/about" className="mr-4">About</Link>
           {session ? (
-            <button onClick={() => signOut()} className="ml-4">Sign Out</button>
+            <>
+              <Link href="/profile" className="mr-4">Profile</Link>
+              <button onClick={() => signOut()} className="ml-4">Sign Out</button>
+            </>
           ) : (
             <button onClick={() => signIn('google')} className="ml-4">Sign In</button>
           )}
@@ -59,12 +63,6 @@ export default function Home() {
           <h2 className="text-3xl font-bold">Your Songs</h2>
           {session && <NewSongForm session={session} />}
         </div>
-        import Link from 'next/link';
-
-// ... (imports)
-
-// ... (Home component)
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {error && <p>Error loading songs.</p>}
           {!songs && <p>Loading...</p>}
@@ -77,8 +75,6 @@ export default function Home() {
             </Link>
           ))}
         </div>
-
-// ... (rest of the file)
       </main>
 
       <footer className="bg-gray-800 p-4 text-center">
