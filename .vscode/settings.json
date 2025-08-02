@@ -1,0 +1,11 @@
+{
+    "explorer.excludeGitIgnore": true,
+    "git.allowForcePush": true,
+    "git.allowNoVerifyCommit": true,
+    "git.alwaysShowStagedChangesResourceGroup": true,
+    "git.alwaysSignOff": true,
+    "git.autofetch": true,
+    "git.enableSmartCommit": true,
+    "git.fetchOnPull": true,
+    "git.followTagsWhenSync": true
+}

@@ -2,9 +2,9 @@ name: NodeJS with Webpack
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
 
 jobs:
   build:
@@ -21,8 +21,20 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
+        cache: 'npm'
 
-    - name: Build
-      run: |
-        npm install
-        npx webpack
+    - name: Install Dependencies
+      # Use 'npm ci' for faster, more reliable installs in CI environments
+      run: npm ci
+
+    # To enable, add a "lint" script to your package.json, e.g., "lint": "eslint ."
+    # - name: Lint Code
+    #   run: npm run lint
+
+    # To enable, add a "test" script to your package.json
+    # - name: Run Tests
+    #   run: npm test
+
+    - name: Build for Production
+      # Use --mode=production to enable Webpack's built-in optimizations
+      run: npx webpack --mode=production

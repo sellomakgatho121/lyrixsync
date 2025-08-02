@@ -1,37 +1,36 @@
-
-import { getSongs, addSong } from './songs.service';
+import { getSongs, getSong, getLyrics } from './songs.service';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
 
 export const getSongsController = async (req: NextApiRequest, res: NextApiResponse) => {
   const session = await getSession({ req });
+  const { id } = req.query;
 
   if (!session || !session.user || !session.user.id) {
     return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  if (id) {
+    const song = await getSong(id as string);
+    return res.json(song);
   }
 
   const songs = await getSongs(session.user.id);
   res.json(songs);
 };
 
-export const addSongController = async (req: NextApiRequest, res: NextApiResponse) => {
-  const session = await getSession({ req });
+export const getLyricsController = async (req: NextApiRequest, res: NextApiResponse) => {
+    const { songId } = req.query;
 
-  if (!session || !session.user || !session.user.id) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
+    if (!songId) {
+        return res.status(400).json({ message: 'Missing songId' });
+    }
 
-  const { title, artist, audioUrl } = req.body;
-
-  if (!title || !artist || !audioUrl) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  try {
-    const song = await addSong(title, artist, audioUrl, session.user.id);
-    res.status(201).json(song);
-  } catch (error) {
-    console.error('Error adding song:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
+    try {
+        const lyrics = await getLyrics(songId as string);
+        res.status(200).json(lyrics);
+    } catch (error) {
+        console.error('Error fetching lyrics:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 };

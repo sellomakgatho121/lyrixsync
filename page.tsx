@@ -1,16 +1,37 @@
-
 import Head from 'next/head'
-
+import Link from 'next/link'
 import useSWR, { mutate } from 'swr'
-
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import io from 'socket.io-client'
+
+let socket
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Home() {
   const { data: session } = useSession()
   const { data: songs, error } = useSWR('/api/songs', fetcher)
+
+  useEffect(() => {
+    socketInitializer()
+    return () => {
+      if (socket) socket.disconnect()
+    }
+  }, [])
+
+  const socketInitializer = async () => {
+    await fetch('/api/socket');
+    socket = io()
+
+    socket.on('connect', () => {
+      console.log('connected')
+    })
+
+    socket.on('update-input', () => {
+      mutate('/api/songs')
+    })
+  }
 
   return (
     <div className="bg-gray-900 text-white min-h-screen">
@@ -36,16 +57,28 @@ export default function Home() {
       <main className="p-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-3xl font-bold">Your Songs</h2>
-          {session && <NewSongForm />}
+          {session && <NewSongForm session={session} />}
         </div>
+        import Link from 'next/link';
+
+// ... (imports)
+
+// ... (Home component)
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {songs.map((song) => (
-            <div key={song.id} className="bg-gray-800 p-4 rounded-lg">
-              <h3 className="text-xl font-bold">{song.title}</h3>
-              <p className="text-gray-400">{song.artist}</p>
-            </div>
+          {error && <p>Error loading songs.</p>}
+          {!songs && <p>Loading...</p>}
+          {songs && songs.map((song) => (
+            <Link href={`/song/${song.id}`} key={song.id}>
+              <a className="bg-gray-800 p-4 rounded-lg block hover:bg-gray-700">
+                <h3 className="text-xl font-bold">{song.title}</h3>
+                <p className="text-gray-400">{song.artist}</p>
+              </a>
+            </Link>
           ))}
         </div>
+
+// ... (rest of the file)
       </main>
 
       <footer className="bg-gray-800 p-4 text-center">
@@ -54,27 +87,24 @@ export default function Home() {
     </div>
   )
 }
-function NewSongForm() {
+
+function NewSongForm({ session }) {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    const res = await fetch('/api/songs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, artist, audioUrl }),
-    })
-
-    if (res.ok) {
-      setTitle('')
-      setArtist('')
-      setAudioUrl('')
-      mutate('/api/songs')
+    if (title && artist && audioUrl && session?.user?.id) {
+        socket.emit('add-song', {
+            title,
+            artist,
+            audioUrl,
+            userId: session.user.id,
+        });
+        setTitle('')
+        setArtist('')
+        setAudioUrl('')
     }
   }
 
@@ -107,4 +137,3 @@ function NewSongForm() {
     </form>
   )
 }
-

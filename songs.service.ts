@@ -11,6 +11,14 @@ export const getSongs = async (userId: string) => {
   });
 };
 
+export const getSong = async (id: string) => {
+  return prisma.song.findUnique({
+    where: {
+      id,
+    },
+  });
+};
+
 export const addSong = async (title: string, artist: string, audioUrl: string, userId: string) => {
   return prisma.song.create({
     data: {
@@ -18,6 +26,17 @@ export const addSong = async (title: string, artist: string, audioUrl: string, u
       artist,
       audioUrl,
       userId,
+    },
+  });
+};
+
+export const getLyrics = async (songId: string) => {
+  return prisma.lyric.findMany({
+    where: {
+      songId,
+    },
+    orderBy: {
+      timestamp: 'asc',
     },
   });
 };
