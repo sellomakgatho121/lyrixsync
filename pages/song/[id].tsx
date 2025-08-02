@@ -1,8 +1,10 @@
+
 import { useRouter } from 'next/router'
 import useSWR, { mutate } from 'swr'
 import { NextPage } from 'next'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import io from 'socket.io-client'
+import ReactPlayer from 'react-player'
 
 let socket
 
@@ -18,6 +20,9 @@ const SongPage: NextPage = () => {
     const [lyrics, setLyrics] = useState([])
     const [newLyricText, setNewLyricText] = useState('')
     const [newLyricTimestamp, setNewLyricTimestamp] = useState(0)
+    const [currentLyric, setCurrentLyric] = useState(null)
+
+    const playerRef = useRef(null)
 
     useEffect(() => {
         if (initialLyrics) {
@@ -83,6 +88,13 @@ const SongPage: NextPage = () => {
         }
     }
 
+    const handleProgress = ({ playedSeconds }) => {
+        const current = lyrics.find(lyric => playedSeconds >= lyric.timestamp)
+        if (current) {
+            setCurrentLyric(current)
+        }
+    }
+
     if (songError || lyricsError) return <div>Failed to load</div>
     if (!song) return <div>Loading...</div>
 
@@ -91,9 +103,16 @@ const SongPage: NextPage = () => {
             <h1 className="text-4xl font-bold mb-4">{song.title}</h1>
             <h2 className="text-2xl text-gray-400 mb-8">{song.artist}</h2>
 
-            <div className="prose prose-invert">
+            <ReactPlayer
+                ref={playerRef}
+                url={song.audioUrl}
+                controls
+                onProgress={handleProgress}
+            />
+
+            <div className="prose prose-invert mt-8">
                 {lyrics.map((lyric) => (
-                    <div key={lyric.id} className="flex items-center justify-between">
+                    <div key={lyric.id} className={`flex items-center justify-between ${currentLyric?.id === lyric.id ? 'bg-gray-700' : ''}`}>
                         <p data-timestamp={lyric.timestamp}>
                             {lyric.text}
                         </p>
