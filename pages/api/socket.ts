@@ -1,8 +1,9 @@
 
 import { Server } from 'socket.io'
-import { addSong } from '../songs.service'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { addSong } from '../../songs.service'
 
-const SocketHandler = (req, res) => {
+const SocketHandler = (req: NextApiRequest, res: NextApiResponse & { socket: { server: any } }) => {
   if (res.socket.server.io) {
     console.log('Socket is already running')
   } else {

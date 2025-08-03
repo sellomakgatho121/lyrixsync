@@ -7,5 +7,9 @@
     "git.autofetch": true,
     "git.enableSmartCommit": true,
     "git.fetchOnPull": true,
-    "git.followTagsWhenSync": true
+    "git.followTagsWhenSync": true,
+    "geminicodeassist.agentDebugMode": true,
+    "geminicodeassist.agentYoloMode": true,
+    "geminicodeassist.codeGenerationPaneViewEnabled": true,
+    "geminicodeassist.updateChannel": "Insiders"
 }

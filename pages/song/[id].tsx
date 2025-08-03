@@ -3,10 +3,22 @@ import { useRouter } from 'next/router'
 import useSWR, { mutate } from 'swr'
 import { NextPage } from 'next'
 import { useState, useEffect, useRef } from 'react'
-import io from 'socket.io-client'
+import io, { Socket } from 'socket.io-client'
 import ReactPlayer from 'react-player'
 
-let socket
+interface Lyric {
+    id: string;
+    text: string;
+    timestamp: number;
+}
+
+interface Song {
+    title: string;
+    artist: string;
+    audioUrl: string;
+}
+
+let socket: Socket
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -14,15 +26,15 @@ const SongPage: NextPage = () => {
     const router = useRouter()
     const { id } = router.query
 
-    const { data: song, error: songError } = useSWR(id ? `/api/songs?id=${id}` : null, fetcher)
+    const { data: song, error: songError } = useSWR<Song>(id ? `/api/songs?id=${id}` : null, fetcher)
     const { data: initialLyrics, error: lyricsError } = useSWR(id ? `/api/lyrics?songId=${id}` : null, fetcher)
 
-    const [lyrics, setLyrics] = useState([])
+    const [lyrics, setLyrics] = useState<Lyric[]>([])
     const [newLyricText, setNewLyricText] = useState('')
     const [newLyricTimestamp, setNewLyricTimestamp] = useState(0)
-    const [currentLyric, setCurrentLyric] = useState(null)
+    const [currentLyric, setCurrentLyric] = useState<Lyric | null>(null)
 
-    const playerRef = useRef(null)
+            const playerRef = useRef(null)
 
     useEffect(() => {
         if (initialLyrics) {
@@ -61,11 +73,11 @@ const SongPage: NextPage = () => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ songId: id, text: newLyricText, timestamp: parseFloat(newLyricTimestamp) }),
+            body: JSON.stringify({ songId: id, text: newLyricText, timestamp: newLyricTimestamp }),
         })
 
         if (res.ok) {
-            const newLyric = await res.json()
+            const newLyric: Lyric = await res.json()
             setLyrics([...lyrics, newLyric])
             setNewLyricText('')
             setNewLyricTimestamp(0)
@@ -88,7 +100,14 @@ const SongPage: NextPage = () => {
         }
     }
 
-    const handleProgress = ({ playedSeconds }) => {
+    interface ProgressState {
+  played: number;
+  playedSeconds: number;
+  loaded: number;
+  loadedSeconds: number;
+}
+
+    const handleProgress = ({ playedSeconds }: ProgressState) => {
         const current = lyrics.find(lyric => playedSeconds >= lyric.timestamp)
         if (current) {
             setCurrentLyric(current)
@@ -107,7 +126,7 @@ const SongPage: NextPage = () => {
                 ref={playerRef}
                 url={song.audioUrl}
                 controls
-                onProgress={handleProgress}
+                                onProgress={handleProgress}
             />
 
             <div className="prose prose-invert mt-8">
@@ -133,7 +152,7 @@ const SongPage: NextPage = () => {
                     type="number"
                     placeholder="Timestamp (in seconds)"
                     value={newLyricTimestamp}
-                    onChange={(e) => setNewLyricTimestamp(e.target.value)}
+                    onChange={(e) => setNewLyricTimestamp(Number(e.target.value))}
                     className="p-2 rounded bg-gray-700 text-white"
                 />
                 <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">

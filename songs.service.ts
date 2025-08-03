@@ -1,13 +1,25 @@
-
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const getSongs = async (userId: string) => {
+export const getSongs = async (userId: string, take?: number, skip?: number, search?: string, sort?: string) => {
+  let orderBy: any = { createdAt: 'desc' }; // Default sort
+  if (sort) {
+    const [field, order] = sort.split('_');
+    orderBy = { [field]: order };
+  }
+
   return prisma.song.findMany({
     where: {
       userId,
+      OR: search ? [
+        { title: { contains: search, mode: 'insensitive' } },
+        { artist: { contains: search, mode: 'insensitive' } },
+      ] : undefined,
     },
+    take,
+    skip,
+    orderBy,
   });
 };
 
@@ -29,11 +41,6 @@ export const addSong = async (title: string, artist: string, audioUrl: string, u
     },
   });
 };
-
-
-// ... (imports)
-
-// ... (getSongs, getSong, addSong)
 
 export const getLyrics = async (songId: string) => {
   return prisma.lyric.findMany({
@@ -75,4 +82,3 @@ export const deleteLyric = async (id: string) => {
     },
   });
 };
-

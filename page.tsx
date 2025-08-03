@@ -1,18 +1,26 @@
-
 import Head from 'next/head'
 import Link from 'next/link'
 import useSWR, { mutate } from 'swr'
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import io from 'socket.io-client'
+import io, { Socket } from 'socket.io-client'
+import { Song } from './types/song'
 
-let socket
+let socket: Socket
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+const SONGS_PER_PAGE = 6;
+
 export default function Home() {
   const { data: session } = useSession()
-  const { data: songs, error } = useSWR('/api/songs', fetcher)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortOrder, setSortOrder] = useState('createdAt_desc') // Default sort
+  const { data: songs, error } = useSWR<Song[]>(
+    `/api/songs?take=${SONGS_PER_PAGE}&skip=${(currentPage - 1) * SONGS_PER_PAGE}&search=${searchQuery}&sort=${sortOrder}`,
+    fetcher
+  )
 
   useEffect(() => {
     socketInitializer()
@@ -30,7 +38,7 @@ export default function Home() {
     })
 
     socket.on('update-input', () => {
-      mutate('/api/songs')
+      mutate(`/api/songs?take=${SONGS_PER_PAGE}&skip=${(currentPage - 1) * SONGS_PER_PAGE}`)
     })
   }
 
@@ -61,12 +69,38 @@ export default function Home() {
       <main className="p-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-3xl font-bold">Your Songs</h2>
-          {session && <NewSongForm session={session} />}
+          <div className="flex items-center space-x-4">
+            <input
+              type="text"
+              placeholder="Search songs..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setCurrentPage(1) // Reset to first page on search
+              }}
+              className="p-2 rounded bg-gray-700 text-white"
+            />
+            <select
+              value={sortOrder}
+              onChange={(e) => {
+                setSortOrder(e.target.value)
+                setCurrentPage(1) // Reset to first page on sort
+              }}
+              className="p-2 rounded bg-gray-700 text-white"
+            >
+              <option value="createdAt_desc">Newest</option>
+              <option value="title_asc">Title (A-Z)</option>
+              <option value="title_desc">Title (Z-A)</option>
+              <option value="artist_asc">Artist (A-Z)</option>
+              <option value="artist_desc">Artist (Z-A)</option>
+            </select>
+            {session && <NewSongForm />}
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {error && <p>Error loading songs.</p>}
           {!songs && <p>Loading...</p>}
-          {songs && songs.map((song) => (
+          {songs && songs.map((song: Song) => (
             <Link href={`/song/${song.id}`} key={song.id}>
               <a className="bg-gray-800 p-4 rounded-lg block hover:bg-gray-700">
                 <h3 className="text-xl font-bold">{song.title}</h3>
@@ -74,6 +108,22 @@ export default function Home() {
               </a>
             </Link>
           ))}
+        </div>
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-l"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={!songs || songs.length < SONGS_PER_PAGE}
+            className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-r"
+          >
+            Next
+          </button>
         </div>
       </main>
 
@@ -84,19 +134,18 @@ export default function Home() {
   )
 }
 
-function NewSongForm({ session }) {
+function NewSongForm() {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (title && artist && audioUrl && session?.user?.id) {
+    if (title && artist && audioUrl) {
         socket.emit('add-song', {
             title,
             artist,
             audioUrl,
-            userId: session.user.id,
         });
         setTitle('')
         setArtist('')

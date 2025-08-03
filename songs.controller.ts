@@ -3,9 +3,14 @@ import { getSongs, getSong, getLyrics, addLyric, updateLyric, deleteLyric } from
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
 
+
+import { getSongs, getSong, getLyrics, addLyric, updateLyric, deleteLyric } from './songs.service';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { getSession } from 'next-auth/react';
+
 export const getSongsController = async (req: NextApiRequest, res: NextApiResponse) => {
   const session = await getSession({ req });
-  const { id } = req.query;
+  const { id, take, skip, search, sort } = req.query;
 
   if (!session || !session.user || !session.user.id) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -16,9 +21,17 @@ export const getSongsController = async (req: NextApiRequest, res: NextApiRespon
     return res.json(song);
   }
 
-  const songs = await getSongs(session.user.id);
+  const songs = await getSongs(
+    session.user.id,
+    take ? parseInt(take as string) : undefined,
+    skip ? parseInt(skip as string) : undefined,
+    search as string,
+    sort as string
+  );
   res.json(songs);
 };
+
+// ... (rest of the file)
 
 export const getLyricsController = async (req: NextApiRequest, res: NextApiResponse) => {
     const { songId } = req.query;
