@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Music, Search, CloudOff } from 'lucide-react';
+import YoutubePlayer from './youtube-player';
 
 type LyricsDisplayProps = {
   song: Song | null;
@@ -20,6 +21,8 @@ type LyricsDisplayProps = {
 
 export default function LyricsDisplay({ song, lyrics, isLoading, error, onManualSearch }: LyricsDisplayProps) {
   const [currentLineIndex, setCurrentLineIndex] = useState(-1);
+  const [animatedLyrics, setAnimatedLyrics] = useState<string[]>([]);
+  const [isTypingAnimationComplete, setIsTypingAnimationComplete] = useState(false);
   const lineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
 
   const lyricsLines = lyrics ? lyrics.split('\n').filter(line => line.trim() !== '') : [];
@@ -29,7 +32,29 @@ export default function LyricsDisplay({ song, lyrics, isLoading, error, onManual
   }, [lyricsLines.length]);
 
   useEffect(() => {
-    if (lyrics && lyricsLines.length > 0) {
+    if (lyrics) {
+      setIsTypingAnimationComplete(false);
+      setAnimatedLyrics([]);
+      let charIndex = 0;
+      const fullText = lyricsLines.join('\n');
+      const interval = setInterval(() => {
+        const nextChar = fullText[charIndex];
+        if (nextChar) {
+            const currentLines = fullText.substring(0, charIndex + 1).split('\n');
+            setAnimatedLyrics(currentLines);
+            charIndex++;
+        } else {
+            clearInterval(interval);
+            setIsTypingAnimationComplete(true);
+        }
+      }, 25); // Typing speed
+
+      return () => clearInterval(interval);
+    }
+  }, [lyrics, lyricsLines]);
+
+  useEffect(() => {
+    if (isTypingAnimationComplete && lyricsLines.length > 0) {
       setCurrentLineIndex(0);
       const interval = setInterval(() => {
         setCurrentLineIndex((prevIndex) => {
@@ -44,7 +69,7 @@ export default function LyricsDisplay({ song, lyrics, isLoading, error, onManual
 
       return () => clearInterval(interval);
     }
-  }, [lyrics, lyricsLines.length]);
+  }, [isTypingAnimationComplete, lyricsLines.length]);
 
   useEffect(() => {
     if (currentLineIndex !== -1 && lineRefs.current[currentLineIndex]) {
@@ -124,6 +149,11 @@ export default function LyricsDisplay({ song, lyrics, isLoading, error, onManual
 
     return (
       <>
+        {song.source === 'youtube' && (
+          <div className="p-4">
+            <YoutubePlayer videoId={song.id} />
+          </div>
+        )}
         <CardHeader>
           <CardTitle className="text-2xl font-headline">{song.title}</CardTitle>
           <p className="text-muted-foreground">{song.artist}</p>
@@ -131,13 +161,13 @@ export default function LyricsDisplay({ song, lyrics, isLoading, error, onManual
         <CardContent>
           <ScrollArea className="h-[50vh] pr-4">
             <div className="text-lg leading-loose space-y-4">
-              {lyricsLines.map((line, index) => (
+              {animatedLyrics.map((line, index) => (
                 <p
                   key={index}
                   ref={(el) => { lineRefs.current[index] = el; }}
                   className={`transition-all duration-300 ${
                     index === currentLineIndex
-                      ? 'text-primary font-bold scale-105'
+                      ? 'text-primary font-bold scale-105 text-glow-primary'
                       : 'text-foreground/70'
                   }`}
                 >

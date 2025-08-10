@@ -1,20 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { generateLyrics, GenerateLyricsInput } from '@/ai/flows/generate-lyrics';
 import type { Song } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Header from './layout/header';
 import MusicLibrary from './music-library';
 import LyricsDisplay from './lyrics-display';
 import { Toaster } from './ui/toaster';
-
-const spotifySongs: Song[] = [
-  { id: 'sp1', title: 'Blinding Lights', artist: 'The Weeknd', source: 'spotify', coverArt: 'https://placehold.co/100x100.png' },
-  { id: 'sp2', title: 'As It Was', artist: 'Harry Styles', source: 'spotify', coverArt: 'https://placehold.co/100x100.png' },
-  { id: 'sp3', title: 'Levitating', artist: 'Dua Lipa', source: 'spotify', coverArt: 'https://placehold.co/100x100.png' },
-  { id: 'sp4', title: 'Save Your Tears', artist: 'The Weeknd', source: 'spotify', coverArt: 'https://placehold.co/100x100.png' },
-];
+import { getCurrentlyPlayingTrack, getSavedTracks, getPlaylists, refreshAccessToken } from '@/lib/spotify';
 
 const youtubeSongs: Song[] = [
   { id: 'yt1', title: 'Bohemian Rhapsody', artist: 'Queen', source: 'youtube', coverArt: 'https://placehold.co/100x100.png' },
@@ -33,6 +26,57 @@ export default function LyrixSyncPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [spotifySongs, setSpotifySongs] = useState<Song[]>([]);
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem('spotify_access_token');
+    if (accessToken) {
+      setIsSpotifyConnected(true);
+      fetchSpotifyData(accessToken);
+    }
+  }, []);
+
+  const fetchSpotifyData = async (accessToken: string) => {
+    try {
+      const [savedTracks, playlists, currentlyPlaying] = await Promise.all([
+        getSavedTracks(accessToken),
+        getPlaylists(accessToken),
+        getCurrentlyPlayingTrack(accessToken),
+      ]);
+
+      const savedSongs = savedTracks.items.map((item: any) => ({
+        id: item.track.id,
+        title: item.track.name,
+        artist: item.track.artists.map((artist: any) => artist.name).join(', '),
+        source: 'spotify',
+        coverArt: item.track.album.images[0]?.url,
+      }));
+
+      setSpotifySongs(savedSongs);
+
+      if (currentlyPlaying && currentlyPlaying.item) {
+        const currentSong = {
+          id: currentlyPlaying.item.id,
+          title: currentlyPlaying.item.name,
+          artist: currentlyPlaying.item.artists.map((artist: any) => artist.name).join(', '),
+          source: 'spotify',
+          coverArt: currentlyPlaying.item.album.images[0]?.url,
+        };
+        setSelectedSong(currentSong);
+        fetchLyrics(currentSong.artist, currentSong.title);
+      }
+    } catch (error) {
+      console.error('Error fetching Spotify data:', error);
+      const refreshToken = localStorage.getItem('spotify_refresh_token');
+      if (refreshToken) {
+        refreshAccessToken(refreshToken).then((data) => {
+          localStorage.setItem('spotify_access_token', data.access_token);
+          fetchSpotifyData(data.access_token);
+        });
+      }
+    }
+  };
 
   const fetchLyrics = async (artist: string, title: string) => {
     setIsLoading(true);
@@ -49,8 +93,19 @@ export default function LyrixSyncPage() {
         return;
       }
 
-      const input: GenerateLyricsInput = { artist, title };
-      const result = await generateLyrics(input);
+      const response = await fetch('/api/lyrics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ artist, title }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch lyrics from API.');
+      }
+
+      const result = await response.json();
 
       if (result.lyrics) {
         setLyrics(result.lyrics);
@@ -96,6 +151,7 @@ export default function LyrixSyncPage() {
               spotifySongs={spotifySongs}
               youtubeSongs={youtubeSongs}
               localSongs={localSongs}
+              isSpotifyConnected={isSpotifyConnected}
             />
           </div>
           <div className="lg:col-span-2 lg:sticky lg:top-8">

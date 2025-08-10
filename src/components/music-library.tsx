@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Library, Upload } from 'lucide-react';
 import SpotifyIcon from './icons/spotify-icon';
 import YoutubeMusicIcon from './icons/youtube-music-icon';
@@ -16,19 +17,38 @@ type MusicLibraryProps = {
   spotifySongs: Song[];
   youtubeSongs: Song[];
   localSongs: Song[];
+  isSpotifyConnected: boolean;
 };
+
+import { searchVideos } from '@/lib/youtube';
 
 export default function MusicLibrary({ 
   onSelectSong, 
   selectedSong,
   spotifySongs,
   youtubeSongs,
-  localSongs
+  localSongs,
+  isSpotifyConnected
 }: MusicLibraryProps) {
-  const [connected, setConnected] = useState({ spotify: false, youtube: false, local: false });
+  const [youtubeSearchQuery, setYoutubeSearchQuery] = useState('');
+  const [youtubeSearchResults, setYoutubeSearchResults] = useState<Song[]>([]);
+
+  const handleYoutubeSearch = async () => {
+    const results = await searchVideos(youtubeSearchQuery);
+    const songs = results.map((item: any) => ({
+      id: item.id.videoId,
+      title: item.snippet.title,
+      artist: item.snippet.channelTitle,
+      source: 'youtube',
+      coverArt: item.snippet.thumbnails.default.url,
+    }));
+    setYoutubeSearchResults(songs);
+  };
+
+  const [connected, setConnected] = useState({ youtube: false, local: false });
 
   const renderConnectView = (
-    service: 'spotify' | 'youtube' | 'local',
+    service: 'youtube' | 'local',
     title: string,
     description: string,
     icon: React.ReactNode
@@ -63,28 +83,29 @@ export default function MusicLibrary({
           </TabsList>
           <div className="mt-4 min-h-[400px]">
             <TabsContent value="spotify">
-              {connected.spotify ? (
+              {isSpotifyConnected ? (
                 <SongList songs={spotifySongs} selectedSong={selectedSong} onSelectSong={onSelectSong} />
               ) : (
-                renderConnectView(
-                  'spotify',
-                  'Connect Spotify',
-                  'Sync your saved songs and playlists from Spotify.',
-                  <SpotifyIcon className="w-8 h-8 text-primary" />
-                )
+                <div className="text-center p-8 flex flex-col items-center justify-center h-full">
+                  <div className="bg-muted p-4 rounded-full mb-4">
+                    <SpotifyIcon className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Connect Spotify</h3>
+                  <p className="text-muted-foreground text-sm mb-6">Sync your saved songs and playlists from Spotify.</p>
+                  {/* The actual connect button is in the header */}
+                </div>
               )}
             </TabsContent>
             <TabsContent value="youtube">
-              {connected.youtube ? (
-                <SongList songs={youtubeSongs} selectedSong={selectedSong} onSelectSong={onSelectSong} />
-              ) : (
-                renderConnectView(
-                  'youtube',
-                  'Connect YouTube Music',
-                  'Sync your library from YouTube Music.',
-                  <YoutubeMusicIcon className="w-8 h-8 text-primary" />
-                )
-              )}
+              <div className="flex gap-2 mb-4">
+                <Input
+                  placeholder="Search on YouTube"
+                  value={youtubeSearchQuery}
+                  onChange={(e) => setYoutubeSearchQuery(e.target.value)}
+                />
+                <Button onClick={handleYoutubeSearch}>Search</Button>
+              </div>
+              <SongList songs={youtubeSearchResults.length > 0 ? youtubeSearchResults : youtubeSongs} selectedSong={selectedSong} onSelectSong={onSelectSong} />
             </TabsContent>
             <TabsContent value="local">
                {connected.local ? (
