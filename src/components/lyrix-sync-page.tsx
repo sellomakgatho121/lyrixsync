@@ -8,17 +8,8 @@ import MusicLibrary from './music-library';
 import LyricsDisplay from './lyrics-display';
 import { Toaster } from './ui/toaster';
 import { getCurrentlyPlayingTrack, getSavedTracks, getPlaylists, refreshAccessToken } from '@/lib/spotify';
-
-const youtubeSongs: Song[] = [
-  { id: 'yt1', title: 'Bohemian Rhapsody', artist: 'Queen', source: 'youtube', coverArt: 'https://placehold.co/100x100.png' },
-  { id: 'yt2', title: 'Shape of You', artist: 'Ed Sheeran', source: 'youtube', coverArt: 'https://placehold.co/100x100.png' },
-  { id: 'yt3', title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', source: 'youtube', coverArt: 'https://placehold.co/100x100.png' },
-];
-
-const localSongs: Song[] = [
-    { id: 'lc1', title: 'Hotel California', artist: 'Eagles', source: 'local', coverArt: 'https://placehold.co/100x100.png' },
-    { id: 'lc2', title: 'Stairway to Heaven', artist: 'Led Zeppelin', source: 'local', coverArt: 'https://placehold.co/100x100.png' },
-]
+import jsmediatags from 'jsmediatags';
+import Visualizer from './visualizer';
 
 export default function LyrixSyncPage() {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
@@ -28,6 +19,9 @@ export default function LyrixSyncPage() {
   const { toast } = useToast();
   const [spotifySongs, setSpotifySongs] = useState<Song[]>([]);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+  const [localSongs, setLocalSongs] = useState<Song[]>([]);
+  const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null);
+  const [visualizerPreset, setVisualizerPreset] = useState<'waveform' | 'bars' | 'particles'>('waveform');
 
   useEffect(() => {
     const accessToken = localStorage.getItem('spotify_access_token');
@@ -128,6 +122,14 @@ export default function LyrixSyncPage() {
   
   const handleSelectSong = (song: Song) => {
     setSelectedSong(song);
+    if (song.source === 'local' && song.file) {
+      const audioUrl = URL.createObjectURL(song.file);
+      const audio = new Audio(audioUrl);
+      setAudioPlayer(audio);
+      audio.play();
+    } else {
+        setAudioPlayer(null);
+    }
     fetchLyrics(song.artist, song.title);
   };
   
@@ -139,19 +141,51 @@ export default function LyrixSyncPage() {
     fetchLyrics(artist, title);
   }
 
+  const handleSelectFolder = async () => {
+    try {
+      const dirHandle = await (window as any).showDirectoryPicker();
+      const newSongs: Song[] = [];
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file' && (entry.name.endsWith('.mp3') || entry.name.endsWith('.m4a'))) {
+          const file = await entry.getFile();
+          jsmediatags.read(file, {
+            onSuccess: (tag: any) => {
+              const newSong: Song = {
+                id: file.name,
+                title: tag.tags.title || 'Unknown Title',
+                artist: tag.tags.artist || 'Unknown Artist',
+                source: 'local',
+                coverArt: '', // TODO: extract cover art
+                file: file,
+              };
+              newSongs.push(newSong);
+              setLocalSongs([...newSongs]);
+            },
+            onError: (error: any) => {
+              console.error('Error reading media tags:', error);
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting folder:', error);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background text-foreground p-4 sm:p-6 md:p-8">
+      <Visualizer audioPlayer={audioPlayer} preset={visualizerPreset} />
       <div className="container mx-auto">
-        <Header />
+        <Header setVisualizerPreset={setVisualizerPreset} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-1">
             <MusicLibrary 
               onSelectSong={handleSelectSong} 
               selectedSong={selectedSong}
               spotifySongs={spotifySongs}
-              youtubeSongs={youtubeSongs}
-              localSongs={localSongs}
               isSpotifyConnected={isSpotifyConnected}
+              onSelectFolder={handleSelectFolder}
+              localSongs={localSongs}
             />
           </div>
           <div className="lg:col-span-2 lg:sticky lg:top-8">
@@ -161,6 +195,7 @@ export default function LyrixSyncPage() {
               isLoading={isLoading}
               error={error}
               onManualSearch={handleManualSearch}
+              audioPlayer={audioPlayer}
             />
           </div>
         </div>

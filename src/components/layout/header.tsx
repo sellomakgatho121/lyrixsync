@@ -1,11 +1,19 @@
 'use client'
 
-import { Music } from 'lucide-react';
+'use client'
+
+import { Music, BarChart, Waves, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getAuthorizeUrl } from '@/lib/spotify';
 import { useState, useEffect } from 'react';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
-export default function Header() {
+
+type HeaderProps = {
+  setVisualizerPreset: (preset: 'waveform' | 'bars' | 'particles') => void;
+};
+
+export default function Header({ setVisualizerPreset }: HeaderProps) {
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
 
   useEffect(() => {
@@ -36,13 +44,26 @@ export default function Header() {
           Sync your music libraries and get lyrics instantly.
         </p>
       </div>
-      {isSpotifyConnected ? (
-        <Button onClick={handleLogout} variant="secondary">
-          Disconnect Spotify
-        </Button>
-      ) : (
-        <Button onClick={handleLogin}>Connect to Spotify</Button>
-      )}
+      <div className="flex items-center gap-4">
+        <ToggleGroup type="single" defaultValue="waveform" onValueChange={(value) => setVisualizerPreset(value as any)}>
+          <ToggleGroupItem value="waveform" aria-label="Toggle waveform">
+            <Waves className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="bars" aria-label="Toggle bars">
+            <BarChart className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="particles" aria-label="Toggle particles">
+            <Sparkles className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+        {isSpotifyConnected ? (
+          <Button onClick={handleLogout} variant="secondary">
+            Disconnect Spotify
+          </Button>
+        ) : (
+          <Button onClick={handleLogin}>Connect to Spotify</Button>
+        )}
+      </div>
     </header>
   );
 }

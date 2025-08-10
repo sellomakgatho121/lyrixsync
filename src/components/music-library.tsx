@@ -10,25 +10,24 @@ import SpotifyIcon from './icons/spotify-icon';
 import YoutubeMusicIcon from './icons/youtube-music-icon';
 import type { Song } from '@/types';
 import SongList from './song-list';
+import { searchVideos } from '@/lib/youtube';
 
 type MusicLibraryProps = {
   onSelectSong: (song: Song) => void;
   selectedSong: Song | null;
   spotifySongs: Song[];
-  youtubeSongs: Song[];
   localSongs: Song[];
   isSpotifyConnected: boolean;
+  onSelectFolder: () => void;
 };
-
-import { searchVideos } from '@/lib/youtube';
 
 export default function MusicLibrary({ 
   onSelectSong, 
   selectedSong,
   spotifySongs,
-  youtubeSongs,
   localSongs,
-  isSpotifyConnected
+  isSpotifyConnected,
+  onSelectFolder
 }: MusicLibraryProps) {
   const [youtubeSearchQuery, setYoutubeSearchQuery] = useState('');
   const [youtubeSearchResults, setYoutubeSearchResults] = useState<Song[]>([]);
@@ -44,26 +43,6 @@ export default function MusicLibrary({
     }));
     setYoutubeSearchResults(songs);
   };
-
-  const [connected, setConnected] = useState({ youtube: false, local: false });
-
-  const renderConnectView = (
-    service: 'youtube' | 'local',
-    title: string,
-    description: string,
-    icon: React.ReactNode
-  ) => (
-    <div className="text-center p-8 flex flex-col items-center justify-center h-full">
-      <div className="bg-muted p-4 rounded-full mb-4">
-        {icon}
-      </div>
-      <h3 className="font-semibold text-lg">{title}</h3>
-      <p className="text-muted-foreground text-sm mb-6">{description}</p>
-      <Button onClick={() => setConnected((prev) => ({ ...prev, [service]: true }))}>
-        Connect to {service.charAt(0).toUpperCase() + service.slice(1)}
-      </Button>
-    </div>
-  );
 
   return (
     <Card className="h-full">
@@ -105,18 +84,20 @@ export default function MusicLibrary({
                 />
                 <Button onClick={handleYoutubeSearch}>Search</Button>
               </div>
-              <SongList songs={youtubeSearchResults.length > 0 ? youtubeSearchResults : youtubeSongs} selectedSong={selectedSong} onSelectSong={onSelectSong} />
+              <SongList songs={youtubeSearchResults} selectedSong={selectedSong} onSelectSong={onSelectSong} />
             </TabsContent>
             <TabsContent value="local">
-               {connected.local ? (
+               {localSongs.length > 0 ? (
                 <SongList songs={localSongs} selectedSong={selectedSong} onSelectSong={onSelectSong} />
               ) : (
-                renderConnectView(
-                  'local',
-                  'Sync Local Files',
-                  'Upload and sync your local music files.',
-                  <Upload className="w-8 h-8 text-primary" />
-                )
+                <div className="text-center p-8 flex flex-col items-center justify-center h-full">
+                    <div className="bg-muted p-4 rounded-full mb-4">
+                        <Upload className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-lg">Sync Local Files</h3>
+                    <p className="text-muted-foreground text-sm mb-6">Upload and sync your local music files.</p>
+                    <Button onClick={onSelectFolder}>Select Folder</Button>
+                </div>
               )}
             </TabsContent>
           </div>

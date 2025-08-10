@@ -17,9 +17,10 @@ type LyricsDisplayProps = {
   isLoading: boolean;
   error: string | null;
   onManualSearch: (artist: string, title: string) => void;
+  audioPlayer: HTMLAudioElement | null;
 };
 
-export default function LyricsDisplay({ song, lyrics, isLoading, error, onManualSearch }: LyricsDisplayProps) {
+export default function LyricsDisplay({ song, lyrics, isLoading, error, onManualSearch, audioPlayer }: LyricsDisplayProps) {
   const [currentLineIndex, setCurrentLineIndex] = useState(-1);
   const [animatedLyrics, setAnimatedLyrics] = useState<string[]>([]);
   const [isTypingAnimationComplete, setIsTypingAnimationComplete] = useState(false);
@@ -54,22 +55,21 @@ export default function LyricsDisplay({ song, lyrics, isLoading, error, onManual
   }, [lyrics, lyricsLines]);
 
   useEffect(() => {
-    if (isTypingAnimationComplete && lyricsLines.length > 0) {
-      setCurrentLineIndex(0);
-      const interval = setInterval(() => {
-        setCurrentLineIndex((prevIndex) => {
-          const nextIndex = prevIndex + 1;
-          if (nextIndex >= lyricsLines.length) {
-            clearInterval(interval);
-            return -1; // Reset highlighting
-          }
-          return nextIndex;
-        });
-      }, 3000); // Highlight new line every 3 seconds
-
-      return () => clearInterval(interval);
+    if (audioPlayer && isTypingAnimationComplete && lyricsLines.length > 0) {
+      const handleTimeUpdate = () => {
+        const { currentTime, duration } = audioPlayer;
+        if (duration) {
+          const progress = currentTime / duration;
+          const lineIndex = Math.floor(progress * lyricsLines.length);
+          setCurrentLineIndex(lineIndex);
+        }
+      };
+      audioPlayer.addEventListener('timeupdate', handleTimeUpdate);
+      return () => {
+        audioPlayer.removeEventListener('timeupdate', handleTimeUpdate);
+      };
     }
-  }, [isTypingAnimationComplete, lyricsLines.length]);
+  }, [audioPlayer, isTypingAnimationComplete, lyricsLines.length]);
 
   useEffect(() => {
     if (currentLineIndex !== -1 && lineRefs.current[currentLineIndex]) {
