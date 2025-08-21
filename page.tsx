@@ -48,6 +48,7 @@ export default function Home() {
         <title>LyrixSync</title>
         <meta name="description" content="Synchronize your lyrics with your music" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
       </Head>
 
       <header className="bg-gray-800 p-4 flex justify-between items-center">
