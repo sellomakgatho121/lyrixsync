@@ -4,7 +4,8 @@ import useSWR, { mutate } from 'swr'
 import { NextPage } from 'next'
 import { useState, useEffect, useRef } from 'react'
 import io, { Socket } from 'socket.io-client'
-import ReactPlayer from 'react-player'
+import dynamic from 'next/dynamic'
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false }) as any
 
 interface Lyric {
     id: string;
@@ -34,7 +35,7 @@ const SongPage: NextPage = () => {
     const [newLyricTimestamp, setNewLyricTimestamp] = useState(0)
     const [currentLyric, setCurrentLyric] = useState<Lyric | null>(null)
 
-            const playerRef = useRef(null)
+            const playerRef = useRef<any>(null)
 
     useEffect(() => {
         if (initialLyrics) {
@@ -100,14 +101,8 @@ const SongPage: NextPage = () => {
         }
     }
 
-    interface ProgressState {
-  played: number;
-  playedSeconds: number;
-  loaded: number;
-  loadedSeconds: number;
-}
-
-    const handleProgress = ({ playedSeconds }: ProgressState) => {
+    const handleProgress = (state: any) => {
+        const { playedSeconds } = state || {}
         const current = lyrics.find(lyric => playedSeconds >= lyric.timestamp)
         if (current) {
             setCurrentLyric(current)
@@ -126,7 +121,7 @@ const SongPage: NextPage = () => {
                 ref={playerRef}
                 url={song.audioUrl}
                 controls
-                                onProgress={handleProgress}
+                                onProgress={(p: any) => handleProgress(p)}
             />
 
             <div className="prose prose-invert mt-8">

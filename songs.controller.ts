@@ -3,11 +3,6 @@ import { getSongs, getSong, getLyrics, addLyric, updateLyric, deleteLyric } from
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
 
-
-import { getSongs, getSong, getLyrics, addLyric, updateLyric, deleteLyric } from './songs.service';
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react';
-
 export const getSongsController = async (req: NextApiRequest, res: NextApiResponse) => {
   const session = await getSession({ req });
   const { id, take, skip, search, sort } = req.query;

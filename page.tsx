@@ -48,6 +48,7 @@ export default function Home() {
         <title>LyrixSync</title>
         <meta name="description" content="Synchronize your lyrics with your music" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
       </Head>
 
       <header className="bg-gray-800 p-4 flex justify-between items-center">
@@ -94,7 +95,7 @@ export default function Home() {
               <option value="artist_asc">Artist (A-Z)</option>
               <option value="artist_desc">Artist (Z-A)</option>
             </select>
-            {session && <NewSongForm />}
+            {session && <NewSongForm userId={(session as any)?.user?.id} />}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -134,7 +135,7 @@ export default function Home() {
   )
 }
 
-function NewSongForm() {
+function NewSongForm({ userId }: { userId?: string }) {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
@@ -146,6 +147,7 @@ function NewSongForm() {
             title,
             artist,
             audioUrl,
+            userId,
         });
         setTitle('')
         setArtist('')
